@@ -1,0 +1,86 @@
+# Topic Metadata Template
+#
+# 来源：wiki/synthesis/dev-loop-design.md 议题 B / D / F
+# 用途：每个 topic 目录下 req.md 的 frontmatter 模板
+# 路径：<plans-dir>/<NN>-<topic>/req.md 顶部
+#
+# 各 skill 读写此 metadata：
+#   dl-req      : 创建本文件，填 topic_id / project_root / project_type / created_at / complexity / Requirements 等
+#   dl-plan     : 写 affects_files.declared
+#   dl-red-team : 补 affects_files.inferred + codex_sessions[0]
+#   dl-integrate: 检测 conflicts_with，更新 status
+#   dl-execute  : 检测 cwd 一致；execute 前重扫
+#   dl-verify   : 填 affects_files.executed + 最终 status
+
+---
+# === 身份 ===
+topic_id: NN-short-kebab-topic            # 议题 B.4：NN 由原子 mkdir 分配，slug 用户给+kebab 化
+project_root: /abs/path/to/repo           # 议题 F.4：(project_root, topic_id) 复合键防跨 repo 误用
+project_type: code | wiki | mixed         # 议题 B.5
+complexity: micro | standard | major      # 议题 G 三档
+
+# === 时间戳 ===
+created_at: YYYY-MM-DD HH:mm:ss
+updated_at: YYYY-MM-DD HH:mm:ss
+created_cwd: /abs/path/at/creation        # 议题 F.4：后续校验 cwd 一致
+
+# === 状态机 ===
+# 议题 D.2 状态机：
+status: planning | red-teamed | integrated | executing | verifying | blocked | aborted | done
+
+# 议题 D.4 取消时填：
+# aborted_at: YYYY-MM-DD HH:mm
+# aborted_by: user
+# last_stage: <stage>
+# reason: user_requested
+
+# === 文件影响（议题 F.2 三层）===
+affects_files:
+  declared: []   # /dl-plan 写：从 Operations/Scope 抽取
+  inferred: []   # /dl-red-team 补：检查 declared 过宽/过窄
+  executed: []   # /dl-verify 记录：实际 touched files
+
+# === 冲突 ===
+conflicts_with: []                       # 议题 F.2：integrate 前求交集后填
+
+# === Codex session 绑定（议题 F.5）===
+codex_sessions:
+  # - stage: red-team
+  #   session_id: continuo-session-xxx
+  #   created_at: YYYY-MM-DD HH:mm
+  #   status: active | closed | stale
+  []
+
+# === 红队循环计数（议题 D.3）===
+red_team_round: 0           # plan↔red-team 最多 3 轮
+execute_retry: 0            # /execute 同类失败重试最多 2 次
+integrate_retry: 0          # 最多 2 次
+verify_retry: 0             # 最多 2 次
+
+# === REASONS Canvas 字段（议题 G）===
+# 仅 standard / major 档填全；micro 档只填 requirements + scope + safeguards
+canvas:
+  requirements: |
+    # /dl-req 写
+  entities:
+    # /dl-req 草层 + /dl-plan 细化
+    # code 项目：业务实体 / 关系
+    # wiki 项目：知识对象（源卡/概念页/实体页/...）+ 内容实体（人物/组织/术语）
+    declared: []
+  approach: TBD-by-plan        # 议题 G：/dl-req 留空待 /dl-plan 填
+  scope:
+    in_scope: []
+    out_of_scope: []
+  operations: TBD-by-plan      # 议题 G：/dl-req 留空待 /dl-plan 填
+  norms: []                    # /dl-req 收集项目规则（CLAUDE.md 摘录）
+  safeguards: []               # /dl-req 必填：性能红线 / 安全约束 / 禁止操作 / raw 只读等
+  unknowns: []                 # 议题 G takeaway 3：显式 Open Questions / Assumptions
+  changelog:
+    # 议题 G takeaway / G.5 第 5 坑：integrate 改 Canvas 时记 v1→v2 改了什么
+    # - version: 2
+    #   integrated_at: YYYY-MM-DD
+    #   changes: |
+    #     - 采纳 P0-1：xxx
+    #     - 驳回 P1-2：xxx 理由：yyy
+    []
+---
