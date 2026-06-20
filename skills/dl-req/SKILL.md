@@ -25,15 +25,15 @@ not auto-invoke /dl-plan.
 
 ## Shared assets (read, do not duplicate inline)
 
-- `~/.claude/dev-loop-shared/project-detect.sh` — project_root / project_type / plans-dir detector
-- `~/.claude/dev-loop-shared/topic-metadata-template.yaml` — req.md frontmatter schema
-- `~/.claude/dev-loop-shared/reasons-takeaways.md` — REASONS adoption rules + 3-tier complexity
+- `~/.claude/skills/dev-loop-shared/project-detect.sh` — project_root / project_type / plans-dir detector
+- `~/.claude/skills/dev-loop-shared/topic-metadata-template.yaml` — req.md frontmatter schema
+- `~/.claude/skills/dev-loop-shared/reasons-takeaways.md` — REASONS adoption rules + 3-tier complexity
 
 ## Behavior
 
 ### Phase A — Detect project
 
-Run `bash ~/.claude/dev-loop-shared/project-detect.sh`. Capture:
+Run `bash ~/.claude/skills/dev-loop-shared/project-detect.sh`. Capture:
 - `project_root`
 - `project_type` (code / wiki / mixed / unknown)
 - `has_project_doc` (yes / no)
@@ -59,7 +59,7 @@ If `has_project_doc=yes`, read `<project_root>/CLAUDE.md` and `<project_root>/AG
 
 ### Phase C — Assess complexity tier
 
-Show the user the 3-tier table from `~/.claude/dev-loop-shared/reasons-takeaways.md` and ask:
+Show the user the 3-tier table from `~/.claude/skills/dev-loop-shared/reasons-takeaways.md` and ask:
 
 > 这个改动属于哪一档？
 > - **micro**：typo / 单 wikilink / 格式小修
@@ -96,7 +96,7 @@ If a user-stated requirement directly conflicts with a rule in the project diges
 
 Path: `<plans_dir>/<NN>-<slug>/req.md`
 
-Frontmatter: use `~/.claude/dev-loop-shared/topic-metadata-template.yaml` as schema. Fill all known fields; leave `TBD-by-plan` for `approach` / `operations`; leave empty lists `[]` for fields /dl-plan will populate (`affects_files.declared`, `conflicts_with`, `codex_sessions`).
+Frontmatter: use `~/.claude/skills/dev-loop-shared/topic-metadata-template.yaml` as schema. Fill all known fields; leave `TBD-by-plan` for `approach` / `operations`; leave empty lists `[]` for fields /dl-plan will populate (`affects_files.declared`, `conflicts_with`, `codex_sessions`).
 
 Body (machine-parseable stable headings — required by 议题 G takeaway 7):
 

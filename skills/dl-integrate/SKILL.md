@@ -21,8 +21,8 @@ Stage 4 of 6. Apply the red-team's P0/P1/P2 verdict and Integration Notes to pla
 
 ## Shared assets
 
-- `~/.claude/dev-loop-shared/project-detect.sh`
-- `~/.claude/dev-loop-shared/topic-metadata-template.yaml`
+- `~/.claude/skills/dev-loop-shared/project-detect.sh`
+- `~/.claude/skills/dev-loop-shared/topic-metadata-template.yaml`
 
 ## Behavior
 
