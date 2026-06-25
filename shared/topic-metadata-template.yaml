@@ -1,5 +1,7 @@
 # Topic Metadata Template
 #
+# Canonical topic.status 枚举 + 转移表 + 状态轴注册表见 ~/.claude/dev-loop-shared/canonical-state-machine-v1.yaml（SSOT）
+#
 # 来源：wiki/synthesis/dev-loop-design.md 议题 B / D / F
 # 用途：每个 topic 目录下 req.md 的 frontmatter 模板
 # 路径：<plans-dir>/<NN>-<topic>/req.md 顶部
@@ -13,6 +15,20 @@
 #   dl-verify   : 填 affects_files.executed + 最终 status
 
 ---
+# === Req contract (议题 J,2026-05-18) ===
+# 权威字段名 + golden sample 见 ~/.claude/dev-loop-shared/req-contract-v1.yaml
+req_contract_version: 1
+req_profile: standard | mvp                 # /dl-req=standard,/dl-req-mvp=mvp
+profile_status: complete | partial          # standard 固定 complete;mvp 可能 partial
+deferred_to_plan: []                        # 本 stage 留给 /dl-plan 的字段
+locked_fields: []                           # 本 stage 已锁、/dl-plan 不能改的字段(mvp only;standard 为空)
+# locked_field_status:                      # mvp only — { field: filled | intentionally_empty | missing }
+#   mvp_scope: missing
+#   acceptance_signals: missing
+#   ...
+# qa_rounds_done: 0                         # mvp only,0..3
+# replacement_round_used: false             # mvp only,one-shot replacement queue
+
 # === 身份 ===
 topic_id: NN-short-kebab-topic            # 议题 B.4：NN 由原子 mkdir 分配，slug 用户给+kebab 化
 project_root: /abs/path/to/repo           # 议题 F.4：(project_root, topic_id) 复合键防跨 repo 误用
@@ -26,7 +42,7 @@ created_cwd: /abs/path/at/creation        # 议题 F.4：后续校验 cwd 一致
 
 # === 状态机 ===
 # 议题 D.2 状态机：
-status: planning | red-teamed | integrated | executing | verifying | blocked | aborted | done
+status: planning | pending-red-team | ready-for-integrate | ready-for-execute | executed | done   # 主态；侧态: blocked | blocked-on-info | red-team-incomplete | verification-inconclusive | aborted
 
 # 议题 D.4 取消时填：
 # aborted_at: YYYY-MM-DD HH:mm
@@ -52,7 +68,7 @@ codex_sessions:
   []
 
 # === 红队循环计数（议题 D.3）===
-red_team_round: 0           # plan↔red-team 最多 3 轮
+red_team_round: 0           # 已完成 red-team 轮数（0-indexed）：dl-req 初始化0；dl-plan 写 plan-vN 设 N-1；dl-red-team 完成设 N；gate <3。详见 SSOT
 execute_retry: 0            # /execute 同类失败重试最多 2 次
 integrate_retry: 0          # 最多 2 次
 verify_retry: 0             # 最多 2 次

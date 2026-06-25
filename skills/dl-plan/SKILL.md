@@ -39,7 +39,9 @@ Stops at plan-vN.md — does not auto-invoke /dl-red-team.
 
 If user specifies topic id (e.g. "for 03-fix-auth"): use it. Validate `(project_root, topic_id)` per 议题 F.4.
 
-Else: list active topics under `<plans_dir>/` where `status: planning`. If exactly one, use it. If multiple, ask user to pick. If none, abort: "no planning-status topic, run /dl-req first."
+Else: list active topics under `<plans_dir>/` where `status: planning`. If exactly one, use it. If multiple, show each topic's `replan_reason`, `blocked_plan`, and latest `plan-vN.md` version (if present), then ask user to pick. If none, abort: "no planning-status topic, run /dl-req first."
+
+Planning topics include both fresh req topics and red-team BLOCK replans. A replan topic carries `replan_reason` / `blocked_plan`; when multiple planning topics exist, never auto-select without showing those fields.
 
 ### Phase B — Validate prerequisites
 
@@ -48,10 +50,61 @@ Read `<topic_dir>/req.md`. Check:
 - File exists and parses (valid frontmatter + body)
 - Frontmatter `status: planning` (议题 D.2)
 - `complexity:` set to micro / standard / major
-- Body sections `## Requirements`, `## Scope`, `## Safeguards` all non-empty
-- `## Approach` and `## Operations` must still say `TBD by /dl-plan` (i.e. /dl-req obeyed its contract)
+- Body parses (frontmatter + sections); profile-aware heading non-empty checks happen in **Phase B.5** (议题 J)
+- `## Approach` and `## Operations` must still say `TBD by /dl-plan` (i.e. req skill obeyed its contract)
 
-If any check fails, abort and tell the user which check failed. **Do not** auto-fix req.md — go back to /dl-req.
+If any check fails, abort and tell the user which check failed. **Do not** auto-fix req.md — go back to the right req skill (/dl-req for standard,/dl-req-mvp for mvp).
+
+### Phase B.5 — Validate req contract (议题 J,profile-aware,2026-05-18)
+
+After Phase B parses req.md but before Phase C re-detects project:
+
+**Step 1 — Contract version + profile**
+- `req_contract_version` exists and == 1. Missing/older → abort: "req.md 来自旧版,请重跑 req 阶段(/dl-req 或 /dl-req-mvp)"。
+- `req_profile` ∈ {standard, mvp}. Unknown → abort.
+
+**Step 2 — Profile-aware heading non-empty check**
+
+If `req_profile == standard`:
+- Required non-empty sections: `## Requirements`, `## Scope`, `## Safeguards`
+- (this preserves the original dl-plan Phase B check,只是 gated by profile)
+
+If `req_profile == mvp`:
+- Required non-empty sections: `## MVP Scope`, `## Acceptance Signals`, `## Design System Anchor`, `## Safeguards`, `## Requirements` (3-line summary)
+- `## Scope` is **NOT** required for mvp(MVP Scope 替代它的角色)
+
+**Step 3 — mvp-only contract validation**
+
+If `req_profile == mvp`:
+- `profile_status` must == `complete`. If `partial`:
+  - List `locked_field_status` entries with value `missing`
+  - Abort with: "/dl-req-mvp 未完成,缺失字段: <list>。请运行 `/dl-req-mvp resume <NN>` 补齐"
+- For each `locked_fields` entry where `locked_field_status` value is `filled`,对应 body section 必须非空
+- For each entry where value is `intentionally_empty`,section 内容允许为空或仅含 `(user reviewed and kept none)` 等价标记
+- `qa_rounds_done` ≤ 3 (consistency check)
+
+**Step 4 — `deferred_to_plan` input registration**
+
+Read `deferred_to_plan` list from frontmatter. These are the fields Phase E MUST populate. Current expected lists:
+- `standard` profile: `[approach, operations, entities_detailed]`
+- `mvp` profile: `[approach, operations, entities_detailed, data_types, interfaces]`
+
+Phase E must produce content for every entry in this list. Unknown entries → abort (likely contract drift).
+
+**Step 5 — mvp-specific consumption rules (constraints on Phase E)**
+
+If `req_profile == mvp`, Phase E MUST honor:
+
+- **Operations 只在 `## MVP Scope ### V1 in` 列出的范围内做事**。任何 `V1 out` / `Anti-scope` 条目出现在 Operations → red-team 标 P0。
+- **`## Acceptance Signals` 进 Test/Verification matrix** (Phase I)。这些是 V1 的验收。
+- **`locked_fields` 内容只读**。/dl-plan **不得**修改 mvp_scope / acceptance_signals / design_system_anchor / reference_candidates / product_benchmarks / design_system_references 的内容。
+- **`## Open-source Reference Candidates (user-confirmed)` + `## Product Benchmark Candidates (user-confirmed)` + `## Design System Reference Candidates (user-confirmed)`** 作为 inspiration input:
+  - 每个 kept candidate 的 `adoption_points`(允许值:layout / interaction / tone / none)是**硬约束**
+  - 每个候选的 `inspect_points`(architecture / scope / performance / error_handling / data_model / deployment / none)是**软提示**(看,不强制)
+  - `forbidden_mimic_points` 是**硬禁**
+- **`## Manual suggestion list`** 仅供阅读,**不**视为 reference(未验证)。
+- **benchmark 永不进 Acceptance Signals**(议题 J:benchmark != requirement)。
+- **`design_system_anchor.visual_tone`** 作为视觉风格约束。具体 component / token / API 选择是 plan 的责任(写进 Operations)。
 
 ### Phase C — Re-detect project context
 
@@ -264,12 +317,19 @@ Body (stable machine-parseable headings):
 In req.md frontmatter (or separate topic metadata file if used):
 
 - `updated_at`: now
-- `status: pending-red-team` (议题 D.2 — about to enter red-team)
+- `status`:
+  - If `complexity == micro`: `ready-for-execute`
+  - Else (`standard` / `major`): `pending-red-team`
+  # micro 直达 ready-for-execute，跳 red-team+integrate；见 canonical-state-machine-v1.yaml transitions
+- If `complexity == micro`, also write:
+  - `red_team.required: false`
+  - `integrate.required: false`
+  - `skip_reason: micro-tier (议题G; 跳 red-team+integrate)`
 - `canvas.approach`: 1-line summary
 - `canvas.operations`: count + 1-line summary
 - `canvas.entities.detailed`: list
 - `affects_files.declared`: list
-- `red_team_round: N`
+- `red_team_round: N-1`   # 已完成轮数，见 SSOT
 
 ### Phase L — Handoff (do not auto-invoke)
 

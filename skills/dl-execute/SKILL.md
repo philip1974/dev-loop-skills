@@ -46,7 +46,21 @@ This is the **highest side-effect** stage: writes project files, runs commands, 
 
 ### Phase C — Cross-topic conflict check (议题 F.2 mandatory scan #4)
 
-Re-run conflict check (议题 F.2). If another topic was integrated since this topic's /dl-integrate and now overlaps, **abort**: race condition; rerun /dl-integrate. Set `status: blocked`, `conflicts_with: [...]`.
+#### C.0 Net-cutover preflight for deprecated topic.status values
+
+Scan all topics under `<plans_dir>/`, excluding `topic_id == <current topic_id>`. If any non-terminal topic (`status ∉ {done, aborted}`) still uses a deprecated topic.status value (`red-teamed`, `integrated`, `executing`, `verifying`, `pending-plan-revision`), **abort** and require migration or manual adjudication before execute.
+
+# See `deprecated_values` in `~/.claude/dev-loop-shared/canonical-state-machine-v1.yaml`.
+
+#### C.1 Active conflict scan
+
+Scan all topics under `<plans_dir>/` where `status ∈ active_conflict_states {planning, pending-red-team, ready-for-integrate, ready-for-execute, executed}`, excluding `topic_id == <current topic_id>`. Compare each topic's `affects_files.declared ∪ inferred` with this topic's `affects_files.declared ∪ inferred`.
+
+# See `active_conflict_states` in `~/.claude/dev-loop-shared/canonical-state-machine-v1.yaml`.
+
+If another topic overlaps, **abort**: race condition; rerun /dl-integrate or resolve the conflicting topic first. Set `status: blocked`, `conflicts_with: [...]`.
+
+Micro topics skip /dl-red-team and /dl-integrate, so this Phase C scan is their mandatory F.2 timing #4 backstop for the skipped integrate-time scan.
 
 ### Phase D — Session strategy for execute (议题 C.3)
 
@@ -54,7 +68,14 @@ Re-run conflict check (议题 F.2). If another topic was integrated since this t
 
 1. Check topic metadata `codex_sessions[]` for stage `execute`. Alive → reuse.
 2. Check topic metadata for stage `red-team` session. Alive → **reuse if** `code` project + `standard`/`micro` complexity. For `major` or `wiki`/`mixed`, prefer step 3.
-3. Call `terminal_list_sessions`. Find any existing codex terminal (`agentLabel` ~ /codex/i OR recent output has codex banner). Found → reuse (and record into topic metadata).
+3. Call `terminal_list_sessions`. **Reuse only if ALL 4 hard rules pass** (2026-05-27 patch — Claude+codex design discussion, same as dl-red-team Phase B):
+   - `session.origin === 'agent'` (security boundary; never touch origin='user')
+   - `String(session.agent_label).toLowerCase() === 'codex'` (snake_case returned field, exact match — note API asymmetry vs `agentLabel` camelCase input parameter)
+   - `session.exit_code === null` (liveness)
+   - `session.cwd === <topic.project_root>` (cross-project isolation)
+
+   Multiple matches → pick latest `created_at`. **Output banner grep FORBIDDEN** — Claude's own conversation contains "codex" / "gpt-5-codex" and would self-pollute the T1 (Claude-owned) terminal output, causing Claude to send_text to its own PTY.
+   Legacy Continuo without these fields → create new (step 4), no fallback grep.
 4. None reusable → only now `terminal_create_session(agentLabel="codex", autorun="codex")`.
 
 Always send the **mode-switch preamble** on reuse (议题 C.3 contract):
@@ -229,6 +250,8 @@ Stop.
 - **Do not** continue if `git status` shows pre-existing working tree changes that overlap with `affects_files.declared` (议题 D.5).
 - **Do not** trust that the codex session from red-team is still mentally in "review mode" — always send the mode-switch preamble before first Op (议题 C.3).
 - **Do not** write to wiki promotion locations (`wiki/synthesis/`, `wiki/concepts/`, etc.) unless explicitly part of an Op AND project_type supports it.
+- **Never call `terminal_send_text` / `terminal_press_key` / `terminal_kill` on any session where `origin !== 'agent'`** (2026-05-27 patch). origin='user' terminals may host Claude itself / user shell / editor / ssh / production commands — agents must not touch them.
+- **Do not use output banner grep to identify session ownership** (2026-05-27 patch). Identity comes from continuo metadata (`origin` + `agent_label`), not from terminal stdout content.
 
 ## Failure modes (议题 D)
 

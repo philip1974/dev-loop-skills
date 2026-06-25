@@ -45,7 +45,7 @@ If `has_project_doc=yes`, read `<project_root>/CLAUDE.md` and `<project_root>/AG
 
 ### Phase B — Allocate NN and create topic dir (atomic)
 
-1. **Try acquire alloc-lock**: `mkdir <plans_dir>/.alloc.lock`. If it fails, wait up to 60s with periodic retry. After 60s check for stale lock — read `<plans_dir>/.alloc.lock/pid`, if `started_at > 10 min ago` then `rmdir .alloc.lock` and retry once. On final failure, abort and tell the user (do not bypass).
+1. **Try acquire alloc-lock**: `mkdir <plans_dir>/.alloc.lock`. If it fails, wait up to 60s with periodic retry. After 60s check for stale lock — read `<plans_dir>/.alloc.lock/info` (format: `<pid> <started_at>`), if `started_at > 10 min ago` then `rm -f <plans_dir>/.alloc.lock/info; rmdir <plans_dir>/.alloc.lock` and retry once. On final failure, abort and tell the user (do not bypass).
 
 2. **Inside lock**: scan `<plans_dir>/` for existing `NN-*` directories. `NN := max(existing) + 1`, zero-padded to 2 digits. Default to `01` if empty.
 
@@ -53,9 +53,29 @@ If `has_project_doc=yes`, read `<project_root>/CLAUDE.md` and `<project_root>/AG
 
 4. **Atomic mkdir**: `mkdir <plans_dir>/<NN>-<slug>`. If EEXIST (race), rescan from step 2 once. If slug also collides under same NN, append a short hash: `<NN>-<slug>-<hex4>`.
 
-5. **Write pid + started_at into lock**: `echo "$$ $(date -Iseconds)" > <plans_dir>/.alloc.lock/info` (helps stale detection by other runs).
+5. **Write pid + started_at into lock info**: `echo "$$ $(date -Iseconds)" > <plans_dir>/.alloc.lock/info` (helps stale detection by other runs).
 
-6. **Release lock**: `rmdir <plans_dir>/.alloc.lock/info; rmdir <plans_dir>/.alloc.lock` (after Phase E writes complete, not before — keeps slug allocation atomic with state init).
+6. **Write placeholder frontmatter** to `<topic_dir>/req.md`:
+
+   ```yaml
+   ---
+   type: req
+   req_contract_version: 1
+   req_profile: standard
+   profile_status: complete       # /dl-req 固定 complete
+   topic_id: <NN-slug>
+   project_root: <abs>
+   project_type: <from Phase A>
+   status: planning
+   created_at: <now>
+   created_cwd: <now>
+   deferred_to_plan: [approach, operations, entities_detailed]
+   locked_fields: []
+   ---
+   # (req body filled by /dl-req Phases C-E)
+   ```
+
+7. **Release lock (immediate, short-lock pattern — 议题 J)**: `rm -f <plans_dir>/.alloc.lock/info; rmdir <plans_dir>/.alloc.lock`. Lock hold time = single-digit seconds. Subsequent Phase D failures use `<topic_dir>/req.md` frontmatter `status: aborted` for rollback, **not** lock-held-throughout.
 
 ### Phase C — Assess complexity tier
 
@@ -92,11 +112,13 @@ Required topics (skip 4-5 for `micro`):
 
 If a user-stated requirement directly conflicts with a rule in the project digest (e.g., "改 raw/" in a wiki project), flag immediately as a Safeguards entry and ask user to confirm or revise — do not silently include the conflict.
 
-### Phase E — Write req.md
+### Phase E — Write req.md (overwrites Phase B placeholder)
 
 Path: `<plans_dir>/<NN>-<slug>/req.md`
 
-Frontmatter: use `~/.claude/dev-loop-shared/topic-metadata-template.yaml` as schema. Fill all known fields; leave `TBD-by-plan` for `approach` / `operations`; leave empty lists `[]` for fields /dl-plan will populate (`affects_files.declared`, `conflicts_with`, `codex_sessions`).
+Frontmatter: use `~/.claude/dev-loop-shared/topic-metadata-template.yaml` as schema. Phase B already wrote the contract block (`req_contract_version: 1` / `req_profile: standard` / `profile_status: complete` / `deferred_to_plan: [approach, operations, entities_detailed]` / `locked_fields: []`) — **preserve those values** (议题 J). Fill all other known fields; leave `TBD-by-plan` for `approach` / `operations`; leave empty lists `[]` for fields /dl-plan will populate (`affects_files.declared`, `conflicts_with`, `codex_sessions`). Update `updated_at: <now>`.
+
+The body is the substantive write — do NOT modify the contract fields written by Phase B.
 
 Body (machine-parseable stable headings — required by 议题 G takeaway 7):
 

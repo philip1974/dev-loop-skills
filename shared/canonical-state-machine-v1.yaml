@@ -1,0 +1,238 @@
+# Dev-loop canonical state machine v1
+#
+# Single source of truth for dev-loop topic lifecycle states, transitions,
+# conflict-active states, and status-like field axes.
+
+meta:
+  version: 1
+  owner: dev-loop
+  last_updated: 2026-06-25
+  consumers:
+    - topic-metadata-template.yaml
+    - dl-req
+    - dl-plan
+    - dl-red-team
+    - dl-integrate
+    - dl-execute
+    - dl-verify
+    - "future: dl-lint"
+  deprecated_values:
+    - red-teamed
+    - integrated
+    - executing
+    - verifying
+    - pending-plan-revision
+
+topic_status:
+  main:
+    - value: planning
+      description: Requirements exist and the topic is ready for initial planning or replanning.
+    - value: pending-red-team
+      description: A plan version exists and is waiting for red-team review.
+    - value: ready-for-integrate
+      description: Red-team returned PASS or REVISE and the feedback is ready to integrate.
+    - value: ready-for-execute
+      description: The executable plan is frozen and ready for execution.
+    - value: executed
+      description: Operations have run and the topic is ready for verification or finalization.
+    - value: done
+      description: The topic lifecycle is complete.
+  side:
+    - value: blocked
+      description: The topic is blocked by a conflict, deep failure, safeguard issue, or manual route.
+    - value: blocked-on-info
+      description: Integration or planning needs user information before it can continue.
+    - value: red-team-incomplete
+      description: Red-team output was missing, malformed, timed out, or otherwise inconclusive.
+    - value: verification-inconclusive
+      description: Verification evidence was insufficient or the verification tool failed inconclusively.
+    - value: aborted
+      description: The user or current stage explicitly stopped the topic.
+
+# red_team_round semantics:
+# - dl-req initializes red_team_round to 0.
+# - dl-plan writes plan-vN and sets red_team_round to N-1.
+# - dl-red-team completes review for plan-vN and sets red_team_round to N.
+# - dl-integrate producing plan-vK for another red-team round keeps red_team_round at K-1; it does not increment.
+# - gate: red_team_round < 3.
+transitions:
+  - from: none
+    to: planning
+    producer_skill: dl-req/dl-req-mvp
+    gate_skill: dl-plan
+    note: Initial topic creation.
+  - from: planning
+    to: pending-red-team
+    producer_skill: dl-plan[standard/major]
+    gate_skill: dl-red-team
+    note: Standard and major topics require red-team review.
+  - from: planning
+    to: ready-for-execute
+    producer_skill: dl-plan[micro]
+    gate_skill: dl-execute
+    note: Micro topics skip red-team and integrate; write red_team.required:false, integrate.required:false, and skip_reason.
+  - from: pending-red-team
+    to: ready-for-integrate
+    producer_skill: dl-red-team[PASS/REVISE]
+    gate_skill: dl-integrate
+    note: Red-team found no blockers or only feedback to integrate.
+  - from: pending-red-team
+    to: planning
+    producer_skill: dl-red-team[BLOCK]
+    gate_skill: dl-plan
+    note: Write replan_reason=red-team-block and blocked_plan=plan-vN.md; do not use pending-plan-revision.
+  - from: pending-red-team
+    to: red-team-incomplete
+    producer_skill: dl-red-team[UNKNOWN/timeout]
+    gate_skill: manual/retry
+    note: Red-team did not produce a complete machine-usable result.
+  - from: red-team-incomplete
+    to: pending-red-team
+    producer_skill: retry
+    gate_skill: dl-red-team
+    note: Retry red-team after incomplete output or timeout.
+  - from: red-team-incomplete
+    to: ready-for-integrate
+    producer_skill: manual-override
+    gate_skill: dl-integrate
+    note: User accepts degraded/manual review and proceeds to integrate.
+  - from: ready-for-integrate
+    to: ready-for-execute
+    producer_skill: dl-integrate
+    gate_skill: dl-execute
+    note: Integrated plan is frozen for execution.
+  - from: ready-for-integrate
+    to: pending-red-team
+    producer_skill: dl-integrate[substantial changes]
+    gate_skill: dl-red-team
+    note: When integrate produces plan-vK requiring another red-team, keep red_team_round=K-1; do not increment.
+  - from: ready-for-integrate
+    to: blocked-on-info
+    producer_skill: dl-integrate[NEED-INFO]
+    gate_skill: manual
+    note: User information is required before integration can continue.
+  - from: blocked-on-info
+    to: ready-for-integrate
+    producer_skill: user-info
+    gate_skill: dl-integrate
+    note: User information is supplied and plan strategy does not need to change.
+  - from: blocked-on-info
+    to: planning
+    producer_skill: user-info-changes-plan
+    gate_skill: dl-plan
+    note: User information changes the plan materially and requires replanning.
+  - from: ready-for-execute
+    to: executed
+    producer_skill: dl-execute success
+    gate_skill: dl-verify
+    note: All operations completed successfully.
+  - from: ready-for-execute
+    to: blocked
+    producer_skill: dl-execute conflict/deep-fail/safeguard
+    gate_skill: manual-route
+    note: Execution cannot continue safely.
+  - from: executed
+    to: done
+    producer_skill: dl-verify PASS+final-close
+    gate_skill: none
+    note: Verification passed and final close or commit was completed.
+  - from: executed
+    to: blocked
+    producer_skill: dl-verify FAIL-*
+    gate_skill: manual-route
+    note: Verification failed and the topic must route to the right prior stage.
+  - from: executed
+    to: verification-inconclusive
+    producer_skill: dl-verify inconclusive
+    gate_skill: manual/retry
+    note: Verification evidence was insufficient.
+  - from: verification-inconclusive
+    to: executed
+    producer_skill: retry
+    gate_skill: dl-verify
+    note: Retry verification from the executed state.
+  - from: any-non-terminal
+    to: aborted
+    producer_skill: current-stage
+    gate_skill: explicit-resume-only
+    note: User or stage aborts; resume requires explicit action.
+  - from: any-active
+    to: blocked
+    producer_skill: current-stage
+    gate_skill: manual-route
+    note: Any active state may become blocked when a stage detects an unrecoverable issue.
+
+active_conflict_states:
+  - planning
+  - pending-red-team
+  - ready-for-integrate
+  - ready-for-execute
+  - executed
+
+# Non-topic axes with enforced:false are registry-only in this topic:
+# canonical names are registered here, but skill write points are not physically renamed.
+# Physical migration belongs to a future schema-migration topic.
+status_axes:
+  - location: req.md frontmatter
+    current_field: status
+    canonical_field: status
+    enum: <topic_status>
+    owner_skill: all-dl
+    migration_status: native
+    enforced: true
+  - location: plan-vN.md frontmatter
+    current_field: status
+    canonical_field: plan_artifact.status
+    enum: [current, superseded, aborted]
+    owner_skill: dl-plan,dl-integrate
+    migration_status: alias-only
+    enforced: false
+  - location: red-team-vN.md frontmatter
+    current_field: status
+    canonical_field: red_team.review_status
+    enum: [complete, incomplete, manual_override]
+    owner_skill: dl-red-team
+    migration_status: alias-only
+    enforced: false
+  - location: red-team-vN.md frontmatter
+    current_field: verdict
+    canonical_field: red_team.verdict
+    enum: [BLOCK, REVISE, PASS, UNKNOWN]
+    owner_skill: dl-red-team
+    migration_status: alias-only
+    enforced: false
+  - location: plan-vN.md real_test block
+    current_field: status
+    canonical_field: real_test.mode
+    enum: [required, skipped, inapplicable]
+    owner_skill: dl-plan,dl-verify
+    migration_status: alias-only
+    enforced: false
+  - location: verify.md
+    current_field: Verdict
+    canonical_field: verify.verdict
+    enum: [PASS, FAIL-behavior, FAIL-safeguard, FAIL-norm, FAIL-real-test, INCONCLUSIVE]
+    owner_skill: dl-verify
+    migration_status: alias-only
+    enforced: false
+  - location: topic metadata codex_sessions[]
+    current_field: status
+    canonical_field: session.state
+    enum: [active, closed, stale]
+    owner_skill: dl-red-team,dl-execute
+    migration_status: alias-only
+    enforced: false
+  - location: execute-log.md
+    current_field: result
+    canonical_field: op.result
+    enum: [success, failure, incomplete]
+    owner_skill: dl-execute
+    migration_status: alias-only
+    enforced: false
+  - location: dl-req-mvp req.md
+    current_field: status
+    canonical_field: candidate.decision
+    enum: [candidate_only, user_kept]
+    owner_skill: dl-req-mvp
+    migration_status: alias-only
+    enforced: false

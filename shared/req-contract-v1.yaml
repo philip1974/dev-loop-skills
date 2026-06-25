@@ -1,0 +1,149 @@
+# Req Contract v1 — Authority for /dl-req family
+#
+# 来源:dev-loop 议题 J(req-mvp family,2026-05-18)
+# 目的:防止 D1 模式下 sibling skill 字段名漂移(P2-10 of round 2 red-team)
+# 路径(最终):~/.claude/dev-loop-shared/req-contract-v1.yaml
+# 路径(草稿):.claude/dev-loop/req-contract-v1-draft.yaml
+#
+# 谁读它:
+#   /dl-req       : Phase E 写 frontmatter 前对照
+#   /dl-req-mvp   : Phase B placeholder + Phase H 最终写入前对照
+#   /dl-plan      : Phase B.5 校验时对照(权威字段名)
+#   未来 req variants 加入前必须先对照 + 扩展本文件
+#
+# 修改规则:
+#   - 加新字段:直接加,通知所有 consumer
+#   - 改字段名:bump version → req-contract-v2.yaml,新建文件,两个版本共存一段时间
+#   - 删字段:bump version
+
+contract_version: 1
+applies_to_profiles: [standard, mvp]
+created: 2026-05-18
+
+# === Required frontmatter fields (all profiles) ===
+required_frontmatter:
+  - req_contract_version       # int, must == 1 for this contract
+  - req_profile                # enum: standard | mvp
+  - profile_status             # enum: complete | partial
+  - topic_id
+  - project_root
+  - project_type
+  - complexity
+  - status                     # standard topic state machine
+  - created_at
+  - updated_at
+  - created_cwd
+  - affects_files
+  - conflicts_with
+  - codex_sessions
+  - red_team_round
+  - execute_retry
+  - integrate_retry
+  - verify_retry
+  - deferred_to_plan           # list of fields /dl-plan must populate
+  - locked_fields              # list of fields /dl-plan must NOT modify (mvp only — empty list for standard)
+
+# === Profile-specific frontmatter ===
+profiles:
+  standard:
+    extra_frontmatter: []
+    locked_fields: []
+    deferred_to_plan:
+      - approach
+      - operations
+      - entities_detailed
+    locked_field_status: not_applicable     # standard does not use this
+    required_body_headings:
+      - "## Requirements"
+      - "## Scope"
+      - "## Safeguards"
+      - "## Approach"               # placeholder "TBD by /dl-plan"
+      - "## Operations"             # placeholder "TBD by /dl-plan"
+
+  mvp:
+    extra_frontmatter:
+      - locked_field_status        # map: field → filled|intentionally_empty|missing
+      - qa_rounds_done             # int 0..3
+      - replacement_round_used     # bool
+      - mvp                        # nested: product_surface / pitch / ship_target
+      - design_system_anchor       # nested: visual_tone
+    locked_fields:
+      - mvp_scope
+      - acceptance_signals
+      - design_system_anchor
+      - reference_candidates
+      - product_benchmarks
+      - design_system_references
+    deferred_to_plan:
+      - approach
+      - operations
+      - entities_detailed
+      - data_types
+      - interfaces
+    required_body_headings:
+      - "## MVP Scope"
+      - "## Acceptance Signals"
+      - "## Design System Anchor"
+      - "## Open-source Reference Candidates (user-confirmed)"
+      - "## Product Benchmark Candidates (user-confirmed)"
+      - "## Design System Reference Candidates (user-confirmed)"
+      - "## Safeguards"
+      - "## Unknowns / Open Questions"
+      - "## Requirements"                     # 3-line summary for plan/red-team
+      - "## Approach"                         # placeholder "TBD by /dl-plan"
+      - "## Operations"                       # placeholder "TBD by /dl-plan"
+      - "## Entities (detailed)"              # placeholder "TBD by /dl-plan"
+      - "## Project rules digest"
+      - "## Discarded candidates (trace only — /dl-plan MUST NOT consume)"
+      - "## Manual suggestion list (unverified — agent could not verify)"
+
+# === locked_field_status enum + completeness rule (mvp only) ===
+locked_field_status_values:
+  filled: user/agent populated the field with content
+  intentionally_empty: user reviewed and explicitly chose to leave empty
+  missing: not yet filled — typically due to round cap hit
+
+profile_status_rule:
+  complete: all locked_field_status values in {filled, intentionally_empty}
+  partial: at least one locked_field_status value == missing
+
+# === Candidate item schema (mvp candidate queue) ===
+candidate_item:
+  required_fields:
+    - name
+    - link
+    - category                   # open-source | product-benchmark | design-system
+    - why_candidate              # must cite specific feature, no generic
+    - what_to_inspect
+    - risk_note
+    - verified_at
+    - verification_method        # web_fetch | search_snippet | memory_only
+    - reachable                  # bool
+    - status                     # candidate_only → user_kept | user_rejected | unsure_discarded
+  optional_fields:
+    - license
+    - adoption_points            # ONLY {layout, interaction, tone, none} — locked constraints
+    - inspect_points             # {architecture, scope, performance, error_handling, data_model, deployment, none} — plan hints only
+    - forbidden_mimic_points
+    - user_review_note
+  hard_rules:
+    - "adoption_points must NOT contain architecture or scope (those are plan-time decisions)"
+    - "candidates with reachable==false OR verification_method==memory_only must NOT enter user-confirmed sections — they go to manual_suggestion_list"
+    - "unsure candidates default to discarded; only explicit user keep moves them to user_kept"
+
+# === Golden req sample paths (for skill authors to diff against) ===
+golden_samples:
+  standard: ~/.claude/dev-loop-shared/golden-samples/req-standard.md
+  mvp: ~/.claude/dev-loop-shared/golden-samples/req-mvp-complete.md
+  mvp_partial: ~/.claude/dev-loop-shared/golden-samples/req-mvp-partial.md
+  # Note: golden samples are TBD — to be created alongside skill promotion
+
+# === Checklist for adding a new req variant ===
+new_variant_checklist:
+  - declare a new profile name
+  - list extra_frontmatter fields specific to this profile
+  - declare locked_fields and deferred_to_plan
+  - declare required_body_headings (must include "## Requirements" 3-line summary for plan/red-team)
+  - update /dl-plan Phase B.5 to recognize the new profile
+  - create a golden sample under ~/.claude/dev-loop-shared/golden-samples/
+  - bump nothing — staying on contract_version 1 is fine if only ADDING a profile

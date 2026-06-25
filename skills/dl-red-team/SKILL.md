@@ -52,12 +52,18 @@ Read `topic.codex_sessions` from metadata. Decision:
 **Lookup order (prefer reuse, never blindly create new)**:
 
 1. **Topic-bound session (best match)** — look in topic metadata `codex_sessions[]` for an entry with `stage: red-team` and `status: active`. Verify it's alive via `terminal_list_sessions`. If alive → **reuse**.
-2. **Any existing codex terminal (host-wide)** — call `terminal_list_sessions`. For each session, check:
-   - `agentLabel` contains "codex" / "Codex" / "CODEX", OR
-   - Recent output (last 20 lines via `terminal_read_output`) contains the codex banner (`OpenAI Codex` / `gpt-5` / codex prompt symbols)
+2. **Any existing codex terminal (host-wide)** — call `terminal_list_sessions`. For each session, **ALL 4 hard rules must pass** (no output-grep heuristic — 2026-05-27 patch after Claude+codex design discussion):
+   - `session.origin === 'agent'` — **security boundary**, never reuse origin='user' (it may carry Claude itself / user shell / editor / ssh / production commands)
+   - `String(session.agent_label).toLowerCase() === 'codex'` — exact match on the snake_case returned field. **API asymmetry**: `terminal_create_session` input parameter is `agentLabel` (camelCase) but `terminal_list_sessions` returns `agent_label` (snake_case); always read from the returned field name
+   - `session.exit_code === null` — liveness check
+   - `session.cwd === <topic.project_root>` — cross-project isolation (避免复用到别项目里的 codex)
 
-   If exactly one match → **reuse** it (record session_id into topic metadata so future lookups hit step 1).
-   If multiple matches → ask the user which to use (show their `agentLabel` + first prompt-line). After user pick → reuse + record.
+   **Output banner grep is FORBIDDEN** — Claude's own conversation prints "codex" / "gpt-5-codex" frequently when discussing this work; reading T1's stdout (the terminal hosting Claude itself) will match the grep and lead Claude to misidentify its own PTY as a codex session, then `send_text` to itself.
+
+   Multiple matches → pick latest `created_at`. Record session_id into topic metadata so future lookups hit step 1.
+   Zero matches → fall through to step 3/4.
+
+   **Legacy Continuo compatibility**: if `terminal_list_sessions` returns sessions without `origin` or `agent_label` fields (older Continuo version), default to creating a new session (step 4). Never fallback to output grep.
 3. **Topic-bound session marked `stale`/`closed`** — mark prior entry as inactive; fall through to step 4.
 4. **No reusable session anywhere** → only now create new via `terminal_create_session` with `agentLabel: "codex"` and `autorun: "codex"`. Wait for codex banner before sending prompt.
 
@@ -155,13 +161,15 @@ Body: cleaned codex output. Preserve all P0/P1/P2/NEED-INFO/Integration Notes se
 
 In req.md (or topic metadata file):
 
+# topic.status 转移见 ~/.claude/dev-loop-shared/canonical-state-machine-v1.yaml
+
 - `updated_at`: now
 - `status` transition:
   - Verdict `PASS` → `ready-for-integrate`
   - Verdict `REVISE` → `ready-for-integrate` (P1/P2 to merge)
-  - Verdict `BLOCK` → `pending-plan-revision` (back to /dl-plan for plan-v(N+1))
+  - Verdict `BLOCK` → `planning` (write `replan_reason: red-team-block` + `blocked_plan: plan-vN.md`; no `pending-plan-revision`, per SSOT / 议题 K)
   - Verdict `UNKNOWN` (degraded path / inconclusive) → `red-team-incomplete`
-- `red_team_round`: N
+- `red_team_round`: N（= 本轮号，已完成 red-team 轮数；见 SSOT）
 - `codex_sessions[<this one>].status`: `active` (keep open for potential round 2)
 - `affects_files.inferred`: extract from red-team P0/P1 hints + NEED-INFO items mentioning specific file paths (议题 F.2 second scan: red-team补 inferred)
 - `conflicts_with`: scan other active topics' `affects_files.declared` ∩ this topic's `affects_files.declared ∪ inferred` (议题 F.2)
@@ -200,6 +208,8 @@ Stop.
 - **Do not edit codex's output** — copy verbatim into red-team-vN.md. Editing belongs to /dl-integrate.
 - **Do not block on missing sentinel** indefinitely — 13.5min cap then degraded path.
 - **Do not reuse a codex session across topics** (议题 F.5 invariant).
+- **Never call `terminal_send_text` / `terminal_press_key` / `terminal_kill` on any session where `origin !== 'agent'`** (2026-05-27 patch). origin='user' terminals may host Claude itself / user shell / editor / ssh / production commands — agents must not touch them. Exception only via explicit user attach mode (out of scope for this skill).
+- **Do not use output banner grep to identify session ownership** (2026-05-27 patch). Identity comes from continuo metadata (`origin` + `agent_label`), not from terminal stdout content. Output content is debug-only, never a control-plane signal.
 - **Do not read terminal by "most recent active"** — always read by stored `session_id` (议题 F.5).
 - For `micro` complexity, **abort immediately** (red-team is skipped). Do not lower the bar.
 - If continuo MCP unavailable, do not silently fall back — explicitly warn user and ask whether to proceed in degraded mode.

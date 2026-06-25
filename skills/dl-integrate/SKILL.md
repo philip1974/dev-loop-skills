@@ -36,7 +36,9 @@ Stage 4 of 6. Apply the red-team's P0/P1/P2 verdict and Integration Notes to pla
 
 ### Phase B — Cross-topic conflict check (议题 F.2 mandatory scan #3)
 
-Scan all other `status ∈ {planning, pending-red-team, ready-for-integrate, ready-for-execute, executing}` topics under `<plans_dir>/`. For each, read their `affects_files.declared ∪ inferred`.
+Scan all other `status ∈ active_conflict_states {planning, pending-red-team, ready-for-integrate, ready-for-execute, executed}` topics under `<plans_dir>/`. For each, read their `affects_files.declared ∪ inferred`.
+
+# 见 ~/.claude/dev-loop-shared/canonical-state-machine-v1.yaml active_conflict_states（去除虚构词 executing，加 executed）
 
 Compute intersection with current topic's `affects_files.declared ∪ inferred`.
 
@@ -119,6 +121,7 @@ Mark previous `plan-vN.md` frontmatter: add `status: superseded` (议题 D.2).
 - `status`:
   - **Default**: `ready-for-execute` (most common path)
   - **If** more than 50% of P1 items were rejected OR new Operations were added that weren't in plan-vN: ask user — "substantial changes; another red-team round?" If yes, status → `pending-red-team` (will trigger plan-v(N+2) ↔ red-team-v(N+1) pairing; check red_team_round still < 3).
+- If integrate produces plan-vK and sends it back to red-team (`status: pending-red-team`), keep `red_team_round = K-1` and do not increment it; the previous red-team already completed round K-1. See SSOT red_team_round semantics.
 - `canvas.changelog`: append v(N)→v(N+1) summary
 - `affects_files.declared`: refreshed from new Operations
 - `conflicts_with`: empty (since we passed Phase B)
