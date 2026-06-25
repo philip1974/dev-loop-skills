@@ -1,0 +1,13 @@
+# loop-scout project registry
+#
+# cache_dir defaults to ~/.claude/loop-scout-cache/.
+# If overridden, cache_dir must be an absolute path and must NOT live under:
+# - any registered project_root
+# - ~/Desktop/dev-loop-skills
+# - ~/.claude/dev-loop-shared
+
+projects:
+  - project_root: /Users/RiGang/Desktop/coding
+    repo_id: coding-wiki
+    enabled_loops: [dev-loop]
+    host_id: MacBook-Pro.local

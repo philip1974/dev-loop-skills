@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  loop-scout morning digest job.
+  This plist is not loaded automatically. Use install-launchd.sh to copy it,
+  then manually run the printed launchctl commands.
+
+  Hourly light scans can be configured with a separate plist if needed.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.devloop.loop-scout</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/RiGang/.claude/dev-loop-shared/loop-scout.py</string>
+    <string>--projects</string>
+    <string>/Users/RiGang/.claude/dev-loop-shared/loop-projects.yaml</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>9</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/RiGang/.claude/loop-scout-cache/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/RiGang/.claude/loop-scout-cache/launchd.err.log</string>
+</dict>
+</plist>
