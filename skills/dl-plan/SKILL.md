@@ -106,6 +106,15 @@ If `req_profile == mvp`, Phase E MUST honor:
 - **benchmark 永不进 Acceptance Signals**(议题 J:benchmark != requirement)。
 - **`design_system_anchor.visual_tone`** 作为视觉风格约束。具体 component / token / API 选择是 plan 的责任(写进 Operations)。
 
+### Phase B.6 — Intent Lock contract
+
+Read `## Intent Lock` from req.md. Format authority: `~/.claude/dev-loop-shared/intent-lock-template.md`; do not inline it here.
+
+- If missing and `complexity ∈ {micro, standard}`: set/keep `autonomy_readiness: low`, warn "建议补 Intent Lock，继续".
+- If missing and `complexity == major`: block and route back to `/dl-req`, unless the user explicitly overrides.
+- If major override is explicit: plan-vN.md MUST include `## Intent Lock (inferred) [unverified]` and mark it risk-bearing.
+- If present: plan-vN.md MUST include a **verbatim Intent Lock excerpt** copied from req.md: Outcome / Positive or Anti-examples / Acceptance samples / Kill criteria / autonomy_readiness. Red-team reads plan only, not req.md.
+
 ### Phase C — Re-detect project context
 
 Run `bash ~/.claude/dev-loop-shared/project-detect.sh` again. Compare current `project_root` with `topic.project_root` from metadata. **If mismatch, abort** (议题 F.4 invariant): user is in wrong repo, must `cd` to correct project_root first.
@@ -225,6 +234,12 @@ Sanity check before moving on:
 - For wiki / pure-docs topics, prefer `inapplicable` unless the topic ships a tool the user runs (e.g. lint script changes).
 - Each resolved skill must exist either project-local (`<project_root>/.codex/skills/<skill>/`) or global (`~/.codex/skills/<skill>/`). If neither, the plan is still allowed (red-team will flag), but /dl-verify will fail-gate the topic until installed.
 
+### Phase F.6 — Map Intent Lock acceptance samples
+
+For each Acceptance sample in the Intent Lock excerpt, create a matching Test/Verification matrix row, `real_test` scenario, or wiki-check row. For wiki-check types, use `intent-lock-template.md` (source card linked, source coverage, index/log, wikilink, no raw diff, lint, grep expected statement).
+
+If a sample cannot be mapped, record it as an Unknown and ask whether to return to `/dl-req`; do not silently drop it.
+
 ### Phase G — Write Reads citation list
 
 List source files the plan reads (for red-team to verify against). Format:
@@ -285,6 +300,9 @@ Body (stable machine-parseable headings):
 - Op2: ...
 - ...
 
+## Intent Lock excerpt
+<verbatim from req.md, OR "## Intent Lock (inferred) [unverified]" for explicit major override>
+
 ## affects_files.declared
 - <path>            # action: create | modify | delete | shared-append
 - ...
@@ -329,6 +347,7 @@ In req.md frontmatter (or separate topic metadata file if used):
 - `canvas.operations`: count + 1-line summary
 - `canvas.entities.detailed`: list
 - `affects_files.declared`: list
+- `autonomy_readiness`: re-evaluate per `intent-lock-template.md` after mapping Acceptance samples. Downgrade to `medium` if any sample is manual/non-executable; use `high` only when every sample maps to executable test/CI/real_test/wiki-lint command with owner gate.
 - `red_team_round: N-1`   # 已完成轮数，见 SSOT
 
 ### Phase L — Handoff (do not auto-invoke)
@@ -354,6 +373,8 @@ Stop.
 - **Do not** write hand-wavy Approach. Pick one strategy explicitly.
 - **Do not** include files only-read in affects_files.declared — those are Reads.
 - **Do not** silently absorb new CLAUDE.md rules that conflict with req.md — flag to user, propose Safeguards update via going back to /dl-req.
+- **Do not** inline the full Intent Lock template; reference `~/.claude/dev-loop-shared/intent-lock-template.md`.
+- **Do not** let a major req without Intent Lock proceed unless the user explicitly overrides; override requires inferred `[unverified]` Intent Lock in plan.
 - **Do not** skip Phase F.5 (议题 H). `real_test` declaration is mandatory; missing → /dl-verify will bounce the topic back. For `inapplicable`, still write the block with status + reason.
 - **Do not** mark a topic `inapplicable` just to avoid scenario writing. If the topic ships any user-runnable behavior (a CLI tool, a UI element, a script the user invokes), use `required` or `skipped` (with red-team-defensible reason).
 - For `micro` tier, still produce Approach + Operations (just shorter). Don't skip Phases E-I.

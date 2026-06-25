@@ -112,11 +112,22 @@ Required topics (skip 4-5 for `micro`):
 
 If a user-stated requirement directly conflicts with a rule in the project digest (e.g., "改 raw/" in a wiki project), flag immediately as a Safeguards entry and ask user to confirm or revise — do not silently include the conflict.
 
+### Phase D.5 — Intent Lock calibration
+
+Use `~/.claude/dev-loop-shared/intent-lock-template.md` as the format authority; do not inline the full template here.
+
+Scale by complexity:
+- `micro`: write only `Intent` / `Not-doing` / `Acceptance` (3 lines). No B choice prompt and no full section required.
+- `standard`: produce a lightweight Intent Lock in ≤1 extra user turn. If using a B choice prompt, include escape first: "D 都不是，我要…".
+- `major`: produce the full Intent Lock; B choices must be short, mutually exclusive, and non-leading.
+
+End with: "这份 Intent Lock 哪里不像你脑子里的目标？只改最重要 1-3 点". After user correction/confirmation, Phase E writes the Intent Lock section and initial `autonomy_readiness` from the template rubric.
+
 ### Phase E — Write req.md (overwrites Phase B placeholder)
 
 Path: `<plans_dir>/<NN>-<slug>/req.md`
 
-Frontmatter: use `~/.claude/dev-loop-shared/topic-metadata-template.yaml` as schema. Phase B already wrote the contract block (`req_contract_version: 1` / `req_profile: standard` / `profile_status: complete` / `deferred_to_plan: [approach, operations, entities_detailed]` / `locked_fields: []`) — **preserve those values** (议题 J). Fill all other known fields; leave `TBD-by-plan` for `approach` / `operations`; leave empty lists `[]` for fields /dl-plan will populate (`affects_files.declared`, `conflicts_with`, `codex_sessions`). Update `updated_at: <now>`.
+Frontmatter: use `~/.claude/dev-loop-shared/topic-metadata-template.yaml` as schema. Phase B already wrote the contract block (`req_contract_version: 1` / `req_profile: standard` / `profile_status: complete` / `deferred_to_plan: [approach, operations, entities_detailed]` / `locked_fields: []`) — **preserve those values** (议题 J). Fill all other known fields; set `autonomy_readiness: low | medium | high` as the /dl-req initial estimate per `intent-lock-template.md`; leave `TBD-by-plan` for `approach` / `operations`; leave empty lists `[]` for fields /dl-plan will populate (`affects_files.declared`, `conflicts_with`, `codex_sessions`). Update `updated_at: <now>`.
 
 The body is the substantive write — do NOT modify the contract fields written by Phase B.
 
@@ -142,6 +153,23 @@ Body (machine-parseable stable headings — required by 议题 G takeaway 7):
 - ...
 
 ## Unknowns / Open Questions
+- ...
+
+## Intent Lock
+<!-- Additive optional-recommended; see ~/.claude/dev-loop-shared/intent-lock-template.md -->
+### User-facing outcome
+...
+### This should feel like
+...
+### This should NOT become
+...
+### Positive / Anti-examples
+- ...
+### Acceptance samples
+- Given ...
+  When ...
+  Then ...
+### Kill criteria
 - ...
 
 ## Approach
@@ -176,7 +204,10 @@ Then stop.
 - **Do not** silently resolve a conflict between user request and CLAUDE.md rules — surface it as a Safeguards entry and ask.
 - **Do not** answer Phase D questions on the user's behalf.
 - **Do not** invent facts. Unknown → Unknowns section. Conflicting CLAUDE.md rule → Safeguards.
+- **Do not** inline the full Intent Lock template; reference `~/.claude/dev-loop-shared/intent-lock-template.md`.
+- **Do not** treat Phase D.5 as a seventh dev-loop stage — it is a req sub-phase.
 - For `micro` tier, **still** fill Safeguards. Skip Norms/Entities draft.
+- For `micro` tier, **do not** require a full Intent Lock; use only Intent / Not-doing / Acceptance.
 - If project_type=mixed, set `writeback_policy` in metadata (议题 B.5) — ask user which dirs allow integrate/verify writeback to wiki/.
 
 ## Failure modes (议题 D)

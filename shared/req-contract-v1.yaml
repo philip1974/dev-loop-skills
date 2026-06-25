@@ -43,6 +43,22 @@ required_frontmatter:
   - deferred_to_plan           # list of fields /dl-plan must populate
   - locked_fields              # list of fields /dl-plan must NOT modify (mvp only — empty list for standard)
 
+# === Optional additive fields (do not bump contract_version) ===
+frontmatter_optional:
+  - autonomy_readiness          # enum: low | medium | high; see intent-lock-template.md rubric
+
+additive_sections:
+  intent_lock:
+    optional_recommended: true
+    template: ~/.claude/dev-loop-shared/intent-lock-template.md
+
+dl_plan_behavior:
+  missing_intent_lock:
+    micro: autonomy_readiness=low + warning "建议补 Intent Lock"
+    standard: autonomy_readiness=low + warning "建议补 Intent Lock"
+    major: block and route back to /dl-req unless user explicitly overrides
+    major_override: generate "## Intent Lock (inferred) [unverified]" in plan; red-team treats as risk
+
 # === Profile-specific frontmatter ===
 profiles:
   standard:

@@ -244,6 +244,7 @@ topic_id: NN-slug
 project_root: /abs/path
 project_type: code | mixed
 complexity: micro | standard | major
+autonomy_readiness: low | medium | high   # derived Intent Lock rubric; see ~/.claude/dev-loop-shared/intent-lock-template.md
 created_at: YYYY-MM-DD HH:mm:ss
 updated_at: YYYY-MM-DD HH:mm:ss
 created_cwd: /abs/path/at/creation
@@ -350,6 +351,24 @@ Body (machine-parseable headings — names authoritative, see `req-contract-v1.y
 ## Requirements
 <3-line summary derived from MVP Scope + Acceptance Signals — for dl-plan/red-team reference>
 
+## Intent Lock
+<!-- Derived from existing MVP anchors; no extra user round. Format authority: ~/.claude/dev-loop-shared/intent-lock-template.md -->
+### User-facing outcome
+<derive from mvp.pitch or the top of MVP Scope>
+### This should feel like
+<derive from design_system_anchor.visual_tone>
+### This should NOT become
+<derive from V1 out / Anti-scope>
+### Positive / Anti-examples
+- Positive: <user_kept open-source/product benchmark references>
+- Anti-example: <V1 out / Anti-scope / forbidden_mimic_points> because <reason>
+### Acceptance samples
+- Given <MVP scenario>
+  When <user action>
+  Then <Acceptance Signal observable result>
+### Kill criteria
+- <Safeguard or Anti-scope key item>
+
 ## Approach
 TBD by /dl-plan.
 
@@ -371,7 +390,7 @@ TBD by /dl-plan.
 <if empty: "(none)">
 ```
 
-After write, ensure frontmatter `status: planning` and `updated_at: <now>`.
+After write, ensure frontmatter `status: planning`, `updated_at: <now>`, and `autonomy_readiness` scored from the derived Intent Lock using the template rubric.
 
 ### Phase I — Handoff
 
@@ -398,6 +417,9 @@ Report to user:
 - **Do not** lock specific design components / tokens / APIs in `design_system_anchor` — only visual tone.
 - **Do not** allow `adoption_points` to contain `architecture` or `scope` — those go to `inspect_points` (plan hints only).
 - **Do not** auto-invoke /dl-plan.
+- **Do not** add a new user round for Intent Lock; derive `## Intent Lock` from existing MVP anchors.
+- **Do not** inline the full Intent Lock template; reference `~/.claude/dev-loop-shared/intent-lock-template.md`.
+- **Do not** expand the derived Intent Lock instructions beyond a short schema note (<=20 lines in this skill).
 - **Do not** overwrite a `filled` or `intentionally_empty` `locked_field_status` slot — resume mode can only fill `missing` slots.
 - **Resume mode**: only allowed when `req_profile=mvp + profile_status=partial + status=planning`. Anything else: abort with current state.
 - For `micro` complexity tier, this skill is probably overkill — suggest /dl-req. If user insists, round cap still applies (and likely exits at 1-2 rounds).

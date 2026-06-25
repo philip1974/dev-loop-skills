@@ -96,6 +96,15 @@ Load `~/.claude/dev-loop-shared/codex-red-team-prompt-template.md`. Fill placeho
 - `{{WIKI_CHECKLIST_BLOCK}}`: inject only if `project_type ∈ {wiki, mixed}`; load 14 items from `wiki-red-team-checklist.md`
 - For `major` tier: append "逐维审查" instruction (force codex to comment on each of 7 REASONS dimensions)
 
+Intent Lock check: plan-vN.md should already include the Intent Lock excerpt; do not send req.md. Instruct codex to compare that excerpt against Approach / Operations / Test matrix using `~/.claude/dev-loop-shared/intent-lock-template.md` as format authority (do not inline it).
+
+Required findings:
+- every Acceptance sample must map to a Test matrix row / real_test scenario / wiki-check with command/check/evidence;
+- Operations touching an anti-example are P0;
+- violated Kill criteria are P0;
+- `autonomy_readiness: high` with manual-only samples is P1 (P0 if it affects scope/safety);
+- inferred `[unverified]` Intent Lock is a P1 risk on major override paths.
+
 **Critical**: prompt must contain the iron rules verbatim:
 
 1. 不读取/修改任何 dev-loop 草稿/设计文件
@@ -205,6 +214,8 @@ Stop.
 
 - **Do not auto-invoke** /dl-integrate or /dl-plan.
 - **Do not feed Claude's analysis to codex** — codex must only see plan-vN.md body + project rules digest + iron rules. No req.md, no dev-loop-design.md, no prior red-team-v(N-1).md.
+- **Do not read req.md** for Intent Lock review; only audit the plan's verbatim/inferred excerpt against Approach, Operations, Test matrix, and autonomy_readiness.
+- **Do not inline the full Intent Lock template; reference `~/.claude/dev-loop-shared/intent-lock-template.md` if needed.**
 - **Do not edit codex's output** — copy verbatim into red-team-vN.md. Editing belongs to /dl-integrate.
 - **Do not block on missing sentinel** indefinitely — 13.5min cap then degraded path.
 - **Do not reuse a codex session across topics** (议题 F.5 invariant).
