@@ -29,9 +29,9 @@ Stops at plan-vN.md — does not auto-invoke /dl-red-team.
 
 ## Shared assets
 
-- `~/.claude/dev-loop-shared/project-detect.sh`
-- `~/.claude/dev-loop-shared/topic-metadata-template.yaml`
-- `~/.claude/dev-loop-shared/reasons-takeaways.md`
+- `~/.claude/skills/dev-loop-shared/project-detect.sh`
+- `~/.claude/skills/dev-loop-shared/topic-metadata-template.yaml`
+- `~/.claude/skills/dev-loop-shared/reasons-takeaways.md`
 
 ## Behavior
 
@@ -117,7 +117,7 @@ Read `## Intent Lock` from req.md. Format authority: `~/.claude/dev-loop-shared/
 
 ### Phase C — Re-detect project context
 
-Run `bash ~/.claude/dev-loop-shared/project-detect.sh` again. Compare current `project_root` with `topic.project_root` from metadata. **If mismatch, abort** (议题 F.4 invariant): user is in wrong repo, must `cd` to correct project_root first.
+Run `bash ~/.claude/skills/dev-loop-shared/project-detect.sh` again. Compare current `project_root` with `topic.project_root` from metadata. **If mismatch, abort** (议题 F.4 invariant): user is in wrong repo, must `cd` to correct project_root first.
 
 Re-read CLAUDE.md / AGENTS.md — rules may have changed since /dl-req. If any new safeguard contradicts canvas, flag for user.
 

@@ -25,15 +25,15 @@ not auto-invoke /dl-plan.
 
 ## Shared assets (read, do not duplicate inline)
 
-- `~/.claude/dev-loop-shared/project-detect.sh` — project_root / project_type / plans-dir detector
-- `~/.claude/dev-loop-shared/topic-metadata-template.yaml` — req.md frontmatter schema
-- `~/.claude/dev-loop-shared/reasons-takeaways.md` — REASONS adoption rules + 3-tier complexity
+- `~/.claude/skills/dev-loop-shared/project-detect.sh` — project_root / project_type / plans-dir detector
+- `~/.claude/skills/dev-loop-shared/topic-metadata-template.yaml` — req.md frontmatter schema
+- `~/.claude/skills/dev-loop-shared/reasons-takeaways.md` — REASONS adoption rules + 3-tier complexity
 
 ## Behavior
 
 ### Phase A — Detect project
 
-Run `bash ~/.claude/dev-loop-shared/project-detect.sh`. Capture:
+Run `bash ~/.claude/skills/dev-loop-shared/project-detect.sh`. Capture:
 - `project_root`
 - `project_type` (code / wiki / mixed / unknown)
 - `has_project_doc` (yes / no)
@@ -79,7 +79,7 @@ If `has_project_doc=yes`, read `<project_root>/CLAUDE.md` and `<project_root>/AG
 
 ### Phase C — Assess complexity tier
 
-Show the user the 3-tier table from `~/.claude/dev-loop-shared/reasons-takeaways.md` and ask:
+Show the user the 3-tier table from `~/.claude/skills/dev-loop-shared/reasons-takeaways.md` and ask:
 
 > 这个改动属于哪一档？
 > - **micro**：typo / 单 wikilink / 格式小修
@@ -127,7 +127,7 @@ End with: "这份 Intent Lock 哪里不像你脑子里的目标？只改最重�
 
 Path: `<plans_dir>/<NN>-<slug>/req.md`
 
-Frontmatter: use `~/.claude/dev-loop-shared/topic-metadata-template.yaml` as schema. Phase B already wrote the contract block (`req_contract_version: 1` / `req_profile: standard` / `profile_status: complete` / `deferred_to_plan: [approach, operations, entities_detailed]` / `locked_fields: []`) — **preserve those values** (议题 J). Fill all other known fields; set `autonomy_readiness: low | medium | high` as the /dl-req initial estimate per `intent-lock-template.md`; leave `TBD-by-plan` for `approach` / `operations`; leave empty lists `[]` for fields /dl-plan will populate (`affects_files.declared`, `conflicts_with`, `codex_sessions`). Update `updated_at: <now>`.
+Frontmatter: use `~/.claude/skills/dev-loop-shared/topic-metadata-template.yaml` as schema. Phase B already wrote the contract block (`req_contract_version: 1` / `req_profile: standard` / `profile_status: complete` / `deferred_to_plan: [approach, operations, entities_detailed]` / `locked_fields: []`) — **preserve those values** (议题 J). Fill all other known fields; set `autonomy_readiness: low | medium | high` as the /dl-req initial estimate per `intent-lock-template.md`; leave `TBD-by-plan` for `approach` / `operations`; leave empty lists `[]` for fields /dl-plan will populate (`affects_files.declared`, `conflicts_with`, `codex_sessions`). Update `updated_at: <now>`.
 
 The body is the substantive write — do NOT modify the contract fields written by Phase B.
 

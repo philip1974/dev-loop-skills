@@ -23,9 +23,9 @@ Has the highest **commit** side-effect — never auto-invoke.
 
 ## Shared assets
 
-- `~/.claude/dev-loop-shared/project-detect.sh`
-- `~/.claude/dev-loop-shared/topic-metadata-template.yaml`
-- `~/.claude/dev-loop-shared/wiki-red-team-checklist.md` (for wiki structure checks)
+- `~/.claude/skills/dev-loop-shared/project-detect.sh`
+- `~/.claude/skills/dev-loop-shared/topic-metadata-template.yaml`
+- `~/.claude/skills/dev-loop-shared/wiki-red-team-checklist.md` (for wiki structure checks)
 
 ## Behavior
 
@@ -42,7 +42,7 @@ Has the highest **commit** side-effect — never auto-invoke.
 
 ### Phase B — Re-detect project (议题 F.4)
 
-Run `bash ~/.claude/dev-loop-shared/project-detect.sh`. Compare with topic.project_root → mismatch aborts. Also load any `lint-cmd` / `test-cmd` / `typecheck-cmd` declarations from CLAUDE.md.
+Run `bash ~/.claude/skills/dev-loop-shared/project-detect.sh`. Compare with topic.project_root → mismatch aborts. Also load any `lint-cmd` / `test-cmd` / `typecheck-cmd` declarations from CLAUDE.md.
 
 ### Phase C — Build verification matrix
 

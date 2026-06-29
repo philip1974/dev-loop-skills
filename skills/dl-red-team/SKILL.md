@@ -21,10 +21,10 @@ Stage 3 of 6. Drive an independent agent (codex via continuo MCP terminal) to cr
 
 ## Shared assets
 
-- `~/.claude/dev-loop-shared/project-detect.sh`
-- `~/.claude/dev-loop-shared/codex-red-team-prompt-template.md`
-- `~/.claude/dev-loop-shared/wiki-red-team-checklist.md`
-- `~/.claude/dev-loop-shared/reasons-takeaways.md`
+- `~/.claude/skills/dev-loop-shared/project-detect.sh`
+- `~/.claude/skills/dev-loop-shared/codex-red-team-prompt-template.md`
+- `~/.claude/skills/dev-loop-shared/wiki-red-team-checklist.md`
+- `~/.claude/skills/dev-loop-shared/reasons-takeaways.md`
 
 ## Required MCP / tools
 
@@ -84,7 +84,7 @@ codex_sessions:
 
 ### Phase C — Build red-team prompt
 
-Load `~/.claude/dev-loop-shared/codex-red-team-prompt-template.md`. Fill placeholders:
+Load `~/.claude/skills/dev-loop-shared/codex-red-team-prompt-template.md`. Fill placeholders:
 
 - `{{PROJECT_ROOT}}`: from project-detect
 - `{{PROJECT_TYPE}}`: code / wiki / mixed

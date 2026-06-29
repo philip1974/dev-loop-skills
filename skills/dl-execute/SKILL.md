@@ -23,8 +23,8 @@ This is the **highest side-effect** stage: writes project files, runs commands, 
 
 ## Shared assets
 
-- `~/.claude/dev-loop-shared/project-detect.sh`
-- `~/.claude/dev-loop-shared/topic-metadata-template.yaml`
+- `~/.claude/skills/dev-loop-shared/project-detect.sh`
+- `~/.claude/skills/dev-loop-shared/topic-metadata-template.yaml`
 
 ## Behavior
 
@@ -38,7 +38,7 @@ This is the **highest side-effect** stage: writes project files, runs commands, 
 
 ### Phase B — Re-detect project + workspace sanity (议题 D.5)
 
-1. Run `bash ~/.claude/dev-loop-shared/project-detect.sh`. Compare with topic.project_root → mismatch aborts.
+1. Run `bash ~/.claude/skills/dev-loop-shared/project-detect.sh`. Compare with topic.project_root → mismatch aborts.
 2. `git status --porcelain` (议题 D.5 "用户手动改了工作区文件"):
    - If unrelated to topic's `affects_files.declared`: warn user, ask whether to stash / commit / proceed with overlap.
    - If overlaps with `affects_files.declared`: abort — user must commit/stash first, OR rerun /dl-plan if the existing changes change scope.
